@@ -22,10 +22,8 @@ echo "=== Build namespace module (port61ds) ==="
 make TARGET=namespace PORT_DIR=src/port61ds OUT="$OUT/build" -j"$(nproc)"
 KO="$OUT/build/droidspaces_ns.ko"
 [ -f "$KO" ] || { echo "build produced no .ko"; find "$OUT" -name '*.ko'; exit 1; }
-# The kernel build already embedded the module's .BTF; extract it before any strip.
-if llvm-readelf -S "$KO" 2>/dev/null | grep -q '\.BTF'; then
-  llvm-objcopy --dump-section .BTF="$OUT/module.btf" "$KO" "$OUT/.ko-copy"
-else
+# Generate the module BTF while DWARF is still present (upstream order).
+if command -v pahole >/dev/null 2>&1; then
   pahole -F dwarf --btf_gen_optimized --btf_encode_detached="$OUT/module.btf" "$KO" || true
 fi
 llvm-strip -d "$KO" || true
