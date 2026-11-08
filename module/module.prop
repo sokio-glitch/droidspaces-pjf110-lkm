@@ -1,0 +1,6 @@
+id=droidspaces_pjf110
+name=Droidspaces LKM (PJF110)
+version=v0.1.0
+versionCode=1
+author=sokio-glitch (base: Shikochin)
+description=[待加载] 一加 Ace 3V (PJF110) 专用 PID/IPC/SysV/mqueue namespace 模块；开机校验内核指纹后加载。

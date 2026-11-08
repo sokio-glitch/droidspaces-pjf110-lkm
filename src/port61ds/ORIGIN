@@ -1,0 +1,12 @@
+Source: merge of Shikochin/Droidspaces-LKM src/port66 (full-backend model) with
+src/port61 (android14-6.1 kernel APIs). Transplanted subsystems originate from
+the Android common kernel (android14-6.1) as packaged in Ylarod DDK.
+
+Build target: ghcr.io/ylarod/ddk-min:android14-6.1-20260313
+Target device: OnePlus PJF110 (qcom,cliffs)
+Target release: 6.1.141-android14-11-o-g16e6ef702577
+
+See README.md for the per-file merge map. Per-file upstream source hashes are in
+the upstream repository's src/port61/ORIGIN and src/port66/ORIGIN.
+
+SPDX-License-Identifier: GPL-2.0-only

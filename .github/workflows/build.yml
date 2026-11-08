@@ -1,0 +1,55 @@
+name: Build PJF110 LKM
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      # Pinned android14-6.1 DDK (same image upstream used for the 6.1 baseline).
+      image: ghcr.io/ylarod/ddk-min@sha256:1dd6ac340b627a90a4031d6d0df6b129d8cc949b139fb56032c898f023d3d5d3
+      options: --privileged
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show build environment
+        run: |
+          echo "KDIR=${KDIR:-<unset>}"
+          command -v clang make python3 pahole gunzip || true
+          clang --version | head -1 || true
+
+      - name: Build, validate, package
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          bash scripts/build-pjf110.sh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Droidspaces-PJF110-LKM
+          path: |
+            out/pjf110/Droidspaces-PJF110-LKM.zip
+            out/pjf110/droidspaces_ns-pjf110.ko
+            out/pjf110/layout-report.json
+            out/pjf110/imports.txt
+
+      - name: Publish release asset
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: PJF110 LKM build ${{ github.run_number }}
+          files: |
+            out/pjf110/Droidspaces-PJF110-LKM.zip
+            out/pjf110/droidspaces_ns-pjf110.ko
+          body: |
+            Experimental Droidspaces namespace LKM for OnePlus Ace 3V (PJF110),
+            kernel 6.1.141-android14-11-o-g16e6ef702577. Install the ZIP in the
+            KernelSU manager and reboot. See README for safety notes.
