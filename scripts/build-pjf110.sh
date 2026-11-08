@@ -22,6 +22,12 @@ echo "=== Build namespace module (port61ds) ==="
 make TARGET=namespace PORT_DIR=src/port61ds OUT="$OUT/build" -j"$(nproc)"
 KO="$OUT/build/droidspaces_ns.ko"
 [ -f "$KO" ] || { echo "build produced no .ko"; find "$OUT" -name '*.ko'; exit 1; }
+# The kernel build already embedded the module's .BTF; extract it before any strip.
+if llvm-readelf -S "$KO" 2>/dev/null | grep -q '\.BTF'; then
+  llvm-objcopy --dump-section .BTF="$OUT/module.btf" "$KO" "$OUT/.ko-copy"
+else
+  pahole -F dwarf --btf_gen_optimized --btf_encode_detached="$OUT/module.btf" "$KO" || true
+fi
 llvm-strip -d "$KO" || true
 cp "$KO" "$OUT/droidspaces_ns-pjf110.ko"
 
@@ -35,14 +41,13 @@ fi
 echo "All $(wc -l < "$OUT/imports.txt") imports resolve on the device."
 
 echo "=== Layout comparison: module BTF vs device BTF ==="
-if command -v pahole >/dev/null 2>&1; then
-  pahole -F dwarf --btf_gen_optimized --btf_encode_detached="$OUT/module.btf" "$KO"
+if [ -s "$OUT/module.btf" ] && command -v python3 >/dev/null 2>&1; then
   python3 "$ROOT/scripts/abi/compare-btf.py" "$OUT/module.btf" "$ROOT/device/btf-vmlinux.bin" \
       > "$OUT/layout-report.json"
   cat "$OUT/layout-report.json"
   python3 "$ROOT/scripts/check-layout.py" "$OUT/layout-report.json"
 else
-  echo "pahole unavailable; skipping BTF layout report (runtime gate is the BTF fingerprint)."
+  echo "module BTF unavailable; skipping layout report (runtime gate is the BTF fingerprint)."
 fi
 
 echo "=== Package KernelSU module ==="
