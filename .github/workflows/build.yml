@@ -30,7 +30,7 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           bash scripts/build-pjf110.sh
 
-      - name: Build optional extension modules (informational)
+      - name: Build optional extension modules (devtmpfs, experimental)
         continue-on-error: true
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -57,16 +57,32 @@ jobs:
             out/pjf110/layout-report.json
             out/pjf110/imports.txt
 
+      - name: Collect release files
+        if: success()
+        run: |
+          mkdir -p rel
+          cp -v out/pjf110/Droidspaces-PJF110-LKM.zip rel/
+          cp -v out/pjf110/droidspaces_ns-pjf110.ko rel/
+          if [ -f out/ext/droidspaces_devtmpfs-pjf110.ko ]; then
+            cp -v out/ext/droidspaces_devtmpfs-pjf110.ko rel/
+          else
+            echo "devtmpfs extension not built; releasing core only"
+          fi
+          ls -l rel/
+
       - name: Publish release asset
         if: success()
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
           name: PJF110 LKM build ${{ github.run_number }}
-          files: |
-            out/pjf110/Droidspaces-PJF110-LKM.zip
-            out/pjf110/droidspaces_ns-pjf110.ko
+          files: rel/*
           body: |
             Experimental Droidspaces namespace LKM for OnePlus Ace 3V (PJF110),
             kernel 6.1.141-android14-11-o-g16e6ef702577. Install the ZIP in the
             KernelSU manager and reboot. See README for safety notes.
+
+            The core module is `Droidspaces-PJF110-LKM.zip`.
+            `droidspaces_devtmpfs-pjf110.ko` is an OPTIONAL, not-yet-live-tested
+            devtmpfs extension (hardware-access mode); do not install it unless
+            you need real /dev nodes.

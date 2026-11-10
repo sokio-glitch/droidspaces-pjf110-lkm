@@ -26,11 +26,34 @@ kernel APIs. See `src/port61ds/README.md`.
 
 ## Status / scope
 
-This first build targets the **core namespace support** so containers can start.
-It does **not** yet include the optional extensions (devtmpfs, user-namespace
-sandboxing, nftables/xt_addrtype, the oplus PID-reference compat fix). Those are
-follow-up work. `--cpus` / `--pids-limit` remain unavailable because the stock
-kernel lacks `CFS_BANDWIDTH` / `CGROUP_PIDS` (enabling them would break the kABI).
+**Core module: built, validated on-device, and installed for boot persistence.**
+Verified on the target phone: PID-namespace creation (`unshare -p` → PID 1),
+SysV IPC (`msgget`/`semget`/`shmget`) and a full POSIX-mqueue send/receive
+round-trip (`mq_open` → `mq_send` → `mq_receive` → `mq_unlink`).
+`droidspaces check` reports **all required features found** (Root, Linux
+version, PID/mount/UTS/IPC namespaces, pivot_root, /proc, /sys, Seccomp).
+
+### Optional extensions
+
+- **devtmpfs** — ported to this 6.1 kernel and shipped as an **optional,
+  experimental** separate module (`droidspaces_devtmpfs-pjf110.ko`, attached to
+  the release). It is only useful for the hardware-access mode; the default
+  containers use a tmpfs `/dev` and work without it. It has **not** been
+  live-tested on the phone yet, and it inline-hooks `device_add`/`device_del`.
+- **netfilter (nftables / xt_addrtype / IPv6 NAT), user namespaces
+  (sandboxing), oplus PID-reference compat** — **not ported.** Upstream ships
+  these only for 6.12 kernels (netfilter is a full vendored nftables, userns is
+  ~30 `live-*` sources); porting them to 6.1 is a large, higher-risk effort and
+  is not needed for normal container use.
+- `--cpus` / `--pids-limit` remain unavailable: the stock kernel lacks
+  `CFS_BANDWIDTH` / `CGROUP_PIDS`, which are core cgroup controllers that can
+  only be added by flashing a kernel (e.g. a Wild Kernel build), not by an LKM.
+
+### Not in scope (requires a real kernel build)
+
+`Macvlan`, `IPv6 NAT`, `CPU limit`, `Process limit`, and sandboxing are marked
+"optional" by `droidspaces check`; they need kernel config/controllers that a
+loadable module cannot supply on this device.
 
 ## Safety — read before installing
 
