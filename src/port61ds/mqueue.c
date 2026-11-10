@@ -44,15 +44,6 @@
 #include <net/sock.h>
 #include "ipc-util.h"
 
-/* Temporary instrumentation to localize the mqueue EACCES on PJF110.
- * Set MQ_DEBUG to 0 (or remove this block) once the root cause is fixed. */
-#define MQ_DEBUG 1
-#if MQ_DEBUG
-#define MQDBG(fmt, ...) pr_info("droidspaces mqdbg: " fmt "\n", ##__VA_ARGS__)
-#else
-#define MQDBG(fmt, ...) do { } while (0)
-#endif
-
 struct mqueue_fs_context {
 	struct ipc_namespace	*ipc_ns;
 	bool			 newns;	/* Set if newly created ipc namespace */
@@ -916,42 +907,28 @@ static int do_mq_open(const char __user *u_name, int oflag, umode_t mode,
 
 	audit_mq_open(oflag, mode, attr);
 
-	if (IS_ERR(name = getname(u_name))) {
-		MQDBG("open getname err=%ld u_name=%px", PTR_ERR(name), u_name);
+	if (IS_ERR(name = getname(u_name)))
 		return PTR_ERR(name);
-	}
-	MQDBG("open name='%s' len=%zu oflag=0x%x mode=0%o mnt=%px root=%px",
-	      name->name, strlen(name->name), oflag, mode, mnt, root);
 
 	fd = get_unused_fd_flags(O_CLOEXEC);
-	if (fd < 0) {
-		MQDBG("open get_unused_fd err=%d", fd);
+	if (fd < 0)
 		goto out_putname;
-	}
 
 	ro = mnt_want_write(mnt);	/* we'll drop it in any case */
-	MQDBG("open mnt_want_write ro=%d sb_flags=0x%lx mnt_flags=0x%x",
-	      ro, mnt->mnt_sb->s_flags, mnt->mnt_flags);
 	inode_lock(d_inode(root));
 	path.dentry = lookup_one_len(name->name, root, strlen(name->name));
 	if (IS_ERR(path.dentry)) {
 		error = PTR_ERR(path.dentry);
-		MQDBG("open lookup_one_len err=%d", error);
 		goto out_putfd;
 	}
-	MQDBG("open lookup ok dentry=%px negative=%d", path.dentry,
-	      d_really_is_negative(path.dentry));
 	path.mnt = mntget(mnt);
 	error = prepare_open(path.dentry, oflag, ro, mode, name, attr);
-	MQDBG("open prepare_open err=%d", error);
 	if (!error) {
 		struct file *file = dentry_open(&path, oflag, current_cred());
 		if (!IS_ERR(file))
 			fd_install(fd, file);
-		else {
+		else
 			error = PTR_ERR(file);
-			MQDBG("open dentry_open err=%d", error);
-		}
 	}
 	path_put(&path);
 out_putfd:
@@ -964,7 +941,6 @@ out_putfd:
 		mnt_drop_write(mnt);
 out_putname:
 	putname(name);
-	MQDBG("open return fd=%d", fd);
 	return fd;
 }
 
@@ -988,16 +964,11 @@ SYSCALL_DEFINE1(ds_mq_unlink, const char __user *, u_name)
 	struct vfsmount *mnt = ipc_ns->mq_mnt;
 
 	name = getname(u_name);
-	if (IS_ERR(name)) {
-		MQDBG("unlink getname err=%ld", PTR_ERR(name));
+	if (IS_ERR(name))
 		return PTR_ERR(name);
-	}
-	MQDBG("unlink name='%s' len=%zu mnt=%px", name->name,
-	      strlen(name->name), mnt);
 
 	audit_inode_parent_hidden(name, mnt->mnt_root);
 	err = mnt_want_write(mnt);
-	MQDBG("unlink mnt_want_write err=%d", err);
 	if (err)
 		goto out_name;
 	inode_lock_nested(d_inode(mnt->mnt_root), I_MUTEX_PARENT);
@@ -1005,10 +976,8 @@ SYSCALL_DEFINE1(ds_mq_unlink, const char __user *, u_name)
 				strlen(name->name));
 	if (IS_ERR(dentry)) {
 		err = PTR_ERR(dentry);
-		MQDBG("unlink lookup_one_len err=%d", err);
 		goto out_unlock;
 	}
-	MQDBG("unlink lookup ok dentry=%px inode=%px", dentry, d_inode(dentry));
 
 	inode = d_inode(dentry);
 	if (!inode) {
@@ -1017,7 +986,6 @@ SYSCALL_DEFINE1(ds_mq_unlink, const char __user *, u_name)
 		ihold(inode);
 		err = vfs_unlink(&init_user_ns, d_inode(dentry->d_parent),
 				 dentry, NULL);
-		MQDBG("unlink vfs_unlink err=%d", err);
 	}
 	dput(dentry);
 
@@ -1027,7 +995,6 @@ out_unlock:
 	mnt_drop_write(mnt);
 out_name:
 	putname(name);
-	MQDBG("unlink return err=%d", err);
 
 	return err;
 }
