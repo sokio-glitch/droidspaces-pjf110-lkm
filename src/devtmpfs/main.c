@@ -109,11 +109,9 @@ static int populate_existing(void)
 static int __init ds_init(void)
 {
 	struct kallrecon_hint hint = { .timeout_ms = 15000 };
-	bool device = of_machine_is_compatible("qcom,canoe") &&
-		!strcmp(utsname()->release, "6.12.69-android16-6-g242e1a07f878-ab15865446-4k");
-	bool vm = of_machine_is_compatible("linux,dummy-virt") &&
-		(!strcmp(utsname()->release, "6.12.76-4k-gae4e2f4f997e-dirty") ||
-		 !strcmp(utsname()->release, "6.12.69-android16-6-g242e1a07f878-ab15865446-4k"));
+	bool device = of_machine_is_compatible("qcom,cliffs") &&
+		!strcmp(utsname()->release, "6.1.141-android14-11-o-g16e6ef702577");
+	bool vm = of_machine_is_compatible("linux,dummy-virt");
 	struct file_system_type *existing;
 	int ret;
 
@@ -147,4 +145,4 @@ static int __init ds_init(void)
 module_init(ds_init);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Shikochin");
-MODULE_DESCRIPTION("Late-loaded devtmpfs for the recorded PLZ110 6.12 kernel");
+MODULE_DESCRIPTION("Late-loaded devtmpfs for the OnePlus PJF110 6.1.141 vendor kernel");

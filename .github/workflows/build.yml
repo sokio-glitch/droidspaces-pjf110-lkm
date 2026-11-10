@@ -30,6 +30,23 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           bash scripts/build-pjf110.sh
 
+      - name: Build optional extension modules (informational)
+        continue-on-error: true
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          EXT_TARGETS="devtmpfs" bash scripts/build-ext.sh
+
+      - name: Upload extension build output
+        if: always()
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: pjf110-ext
+          path: |
+            out/ext/*.ko
+            out/ext/*.log
+            out/ext/*.imports
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
